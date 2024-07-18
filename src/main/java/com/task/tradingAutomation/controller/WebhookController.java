@@ -25,10 +25,11 @@ public class WebhookController {
 
     @PostMapping
     public ResponseEntity<String> receiveAlert(@RequestBody TradingAlert tradingAlert) {
-        if (!PayloadValidator.isValid(tradingAlert)) {
-            return new ResponseEntity<>("Invalid payload", HttpStatus.BAD_REQUEST);
+        try {
+            webhookListenerService.processAlert(tradingAlert);
+            return new ResponseEntity<>("Alert received", HttpStatus.OK);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(e.getMessage(), HttpStatus.BAD_REQUEST);
         }
-        webhookListenerService.processAlert(tradingAlert);
-        return new ResponseEntity<>("Alert received", HttpStatus.OK);
     }
 }
