@@ -6,6 +6,7 @@ import com.task.tradingAutomation.service.DhanBrokerApiClient;
 import com.task.tradingAutomation.service.OrderExecutionService;
 import com.task.tradingAutomation.service.RiskManagementService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -29,7 +30,7 @@ public class TradeMonitoringJob {
     // Scheduled job to monitor trades every minute -Periodically checks if any open trades have hit their stop loss
     // or if cumulative risk requires closing all trades
 
-    //@Scheduled(fixedRate = 60000) // Check every minute
+    @Scheduled(fixedRate = 60000) // Check every minute
     public void monitorTrades() {
         System.out.println("Task is running");
         List<Trades> openTrades = tradeRepository.findByStatus("open");
