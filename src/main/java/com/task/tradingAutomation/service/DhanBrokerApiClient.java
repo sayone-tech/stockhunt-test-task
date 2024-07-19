@@ -2,6 +2,7 @@ package com.task.tradingAutomation.service;
 
 import com.task.tradingAutomation.entity.Trades;
 import com.task.tradingAutomation.dto.*;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,7 +34,7 @@ public class DhanBrokerApiClient {
     private String baseUrl;
 
 
-//    @RateLimiter(name = "dhanApi")
+    @RateLimiter(name = "dhanApi")
     public String placeTradeOrder(OrderAlert alert) {
         String url = baseUrl + "/orders";
 
@@ -68,7 +69,6 @@ public class DhanBrokerApiClient {
     }
 
 
-//    @RateLimiter(name = "dhanApi")
     public double getCurrentMarketPrice(String symbolId) {
         String url = baseUrl + "/market-price/" + symbolId;
         RestTemplate restTemplate = new RestTemplate();
@@ -87,7 +87,6 @@ public class DhanBrokerApiClient {
     }
 
 
-//    @RateLimiter(name = "dhanApi")
     // Method to close multiple trades at once
     public void closeAllOpenTrades(List<Trades> openTrades) {
         String endpoint = baseUrl + "/closeAllTrades"; // Adjust endpoint as necessary-get correct api
@@ -95,7 +94,7 @@ public class DhanBrokerApiClient {
         restTemplate.postForObject(endpoint, request, Void.class);// Make the API call
     }
 
-//    @RateLimiter(name = "dhanApi")
+
     // Method to close a single trade
     public void closeTrade(String symbolId, int quantity) {
         String endpoint = baseUrl + "/closeTrade"; // Adjust endpoint as necessary-get correct api
