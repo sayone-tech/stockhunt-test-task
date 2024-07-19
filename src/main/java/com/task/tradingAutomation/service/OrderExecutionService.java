@@ -119,7 +119,7 @@ public class OrderExecutionService {
             }
 
             // Step 3: Execute the order using Dhan API client
-//            dhanBrokerApiClient.placeTradeOrder(orderAlert);
+            dhanBrokerApiClient.placeTradeOrder(orderAlert);
 
             // Update the cumulative risk
             riskManagementService.manageDailyRisk(orderAlert,tradeRisk);
