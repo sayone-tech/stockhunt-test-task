@@ -1,6 +1,7 @@
 package com.task.tradingAutomation.service;
 
-import com.task.tradingAutomation.dto.TradingAlert;
+import com.task.tradingAutomation.dto.TradingAlertRequest;
+import com.task.tradingAutomation.dto.TradingAlertRequest;
 import com.task.tradingAutomation.exception.UserDefinedExceptions;
 import com.task.tradingAutomation.util.PayloadValidator;
 import org.slf4j.Logger;
@@ -16,12 +17,11 @@ public class WebhookListenerService {
     @Autowired
     private OrderExecutionService orderExecutionService;
 
-    public void processAlert(TradingAlert tradingAlert) {
+    public void processAlert(TradingAlertRequest tradingAlert) {
         // Step 1: Payload Validation
         if (!PayloadValidator.isValid(tradingAlert)) {
             throw new UserDefinedExceptions.InvalidPayloadException("Invalid payload");
         }
-
         try {
             orderExecutionService.executeOrder(tradingAlert);
         } catch (Exception e) {

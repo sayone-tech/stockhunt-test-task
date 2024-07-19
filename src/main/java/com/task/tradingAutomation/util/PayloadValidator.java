@@ -1,16 +1,16 @@
 package com.task.tradingAutomation.util;
 
-import com.task.tradingAutomation.dto.TradingAlert;
+import com.task.tradingAutomation.dto.TradingAlertRequest;
 
 public class PayloadValidator {
-    public static boolean isValid(TradingAlert alert) {
+    public static boolean isValid(TradingAlertRequest alert) {
         // Check if the alert object and its properties meet certain criteria
         return alert != null &&
-                isValidString(alert.getNameOfStrategy()) &&
+                isValidString(alert.getStrategyName()) &&
                 isValidString(alert.getSymbolId()) &&
                 isValidAction(alert.getAction()) &&
                 alert.getQuantity() > 0 &&
-                alert.getSlPerTrade() >= 0 &&  // Assuming SL per trade can be zero or positive
+                alert.getSlPerTradePercent() >= 0 &&  // Assuming SL per trade can be zero or positive
                 alert.getMaxDayRiskAmount() >= 0;      // Assuming max day risk amount can be zero or positive
     }
 

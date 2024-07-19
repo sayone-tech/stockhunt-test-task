@@ -1,22 +1,39 @@
 package com.task.tradingAutomation.dto;
 
-public class TradingAlert {
-    private String nameOfStrategy;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+public class TradingAlertRequest {
+
+    @JsonProperty("Name of strategy")
+    private String strategyName;
+
+    @JsonProperty("Symbol ID")
     private String symbolId;
+
+    @JsonProperty("Action")
     private String action;
+
+    @JsonProperty("quantity")
     private int quantity;
+
+    @JsonProperty("Inverse")
     private boolean inverse;
-    private float slPerTrade;
+
+    @JsonProperty("SL pertrade%")
+    private float slPerTradePercent;
+
+    @JsonProperty("Maxdayriskamount")
     private float maxDayRiskAmount;
+
     private String orderType; // "market" or "stop_loss"
     private double price; // Use for stop loss orders
 
-    public String getNameOfStrategy() {
-        return nameOfStrategy;
+    public String getStrategyName() {
+        return strategyName;
     }
 
-    public void setNameOfStrategy(String nameOfStrategy) {
-        this.nameOfStrategy = nameOfStrategy;
+    public void setStrategyName(String strategyName) {
+        this.strategyName = strategyName;
     }
 
     public String getSymbolId() {
@@ -51,12 +68,12 @@ public class TradingAlert {
         this.inverse = inverse;
     }
 
-    public float getSlPerTrade() {
-        return slPerTrade;
+    public float getSlPerTradePercent() {
+        return slPerTradePercent;
     }
 
-    public void setSlPerTrade(float slPerTrade) {
-        this.slPerTrade = slPerTrade;
+    public void setSlPerTradePercent(float slPerTradePercent) {
+        this.slPerTradePercent = slPerTradePercent;
     }
 
     public float getMaxDayRiskAmount() {

@@ -1,6 +1,6 @@
 package com.task.tradingAutomation.dto;
 
-import com.task.tradingAutomation.Entity.Trades;
+import com.task.tradingAutomation.entity.Trades;
 
 import java.util.List;
 

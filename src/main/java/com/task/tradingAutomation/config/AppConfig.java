@@ -1,6 +1,6 @@
 package com.task.tradingAutomation.config;
 
-import com.task.tradingAutomation.dto.TradingAlert;
+import com.task.tradingAutomation.dto.TradingAlertRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -8,7 +8,7 @@ import org.springframework.context.annotation.Configuration;
 public class AppConfig {
 
     @Bean
-    public TradingAlert tradingAlert() {
-        return new TradingAlert();
+    public TradingAlertRequest tradingAlert() {
+        return new TradingAlertRequest();
     }
 }

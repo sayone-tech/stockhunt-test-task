@@ -1,6 +1,6 @@
 package com.task.tradingAutomation.repository;
 
-import com.task.tradingAutomation.Entity.Trades;
+import com.task.tradingAutomation.entity.Trades;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;

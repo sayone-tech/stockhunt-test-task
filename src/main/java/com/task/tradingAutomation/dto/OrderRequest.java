@@ -1,19 +1,27 @@
 package com.task.tradingAutomation.dto;
 
 public class OrderRequest {
-    private String symbol;
+    private String nameOfStrategy;
+    private String symbolId;
     private int quantity;
     private String action; // "buy" or "sell"
     private String orderType; // "market" or "stop_loss"
     private double price; // Use 0 for market orders
 
-
-    public String getSymbol() {
-        return symbol;
+    public String getNameOfStrategy() {
+        return nameOfStrategy;
     }
 
-    public void setSymbol(String symbol) {
-        this.symbol = symbol;
+    public void setNameOfStrategy(String nameOfStrategy) {
+        this.nameOfStrategy = nameOfStrategy;
+    }
+
+    public String getSymbolId() {
+        return symbolId;
+    }
+
+    public void setSymbolId(String symbolId) {
+        this.symbolId = symbolId;
     }
 
     public int getQuantity() {

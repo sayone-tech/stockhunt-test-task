@@ -1,15 +1,15 @@
 package com.task.tradingAutomation.controller;
 
+import com.task.tradingAutomation.dto.TradingAlertRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.task.tradingAutomation.util.PayloadValidator;
-import com.task.tradingAutomation.dto.TradingAlert;
+import com.task.tradingAutomation.dto.TradingAlertRequest;
 import com.task.tradingAutomation.service.WebhookListenerService;
 
 @RestController
@@ -21,10 +21,14 @@ public class WebhookController {
     private WebhookListenerService webhookListenerService;
 
     @Autowired
-    TradingAlert tradingAlert;
+    TradingAlertRequest tradingAlert;
 
-    @PostMapping
-    public ResponseEntity<String> receiveAlert(@RequestBody TradingAlert tradingAlert) {
+    @Value("${webhook.secret}")
+    private String webhookSecret;
+
+    @PostMapping("/alert")
+    public ResponseEntity<String>receiveAlert(@RequestHeader("X-Webhook-Secret") String secret,
+                                              @RequestBody TradingAlertRequest tradingAlert) {
         try {
             webhookListenerService.processAlert(tradingAlert);
             return new ResponseEntity<>("Alert received", HttpStatus.OK);

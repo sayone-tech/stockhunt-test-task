@@ -1,9 +1,7 @@
 package com.task.tradingAutomation.service;
 
-import com.task.tradingAutomation.Entity.Trades;
+import com.task.tradingAutomation.entity.Trades;
 import com.task.tradingAutomation.dto.*;
-import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
-import io.github.resilience4j.retry.annotation.Retry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -34,18 +32,19 @@ public class DhanBrokerApiClient {
     @Value("${dhan.api.url}")
     private String baseUrl;
 
-    @Retry(name = "dhanApi")
-    @RateLimiter(name = "dhanApi")
-    public void placeTradeOrder(TradingAlert tradingAlert) {
-        String url = baseUrl + "/orders/place";
+
+//    @RateLimiter(name = "dhanApi")
+    public String placeTradeOrder(OrderAlert alert) {
+        String url = baseUrl + "/orders";
 
         // Create the request body
         OrderRequest orderRequest = new OrderRequest();
-        orderRequest.setSymbol(tradingAlert.getSymbolId());
-        orderRequest.setQuantity(tradingAlert.getQuantity());
-        orderRequest.setAction(tradingAlert.getAction());
-        orderRequest.setOrderType(tradingAlert.getOrderType()); // Assuming market order for simplicity
-        orderRequest.setPrice(tradingAlert.getPrice()); // Market orders typically have no price
+        orderRequest.setNameOfStrategy(alert.getStrategyName());
+        orderRequest.setSymbolId(alert.getSymbolId());
+        orderRequest.setQuantity(alert.getQuantity());
+        orderRequest.setAction(alert.getAction());
+        orderRequest.setOrderType(alert.getOrderType());
+        orderRequest.setPrice(alert.getStopLossPrice()); // Market orders typically have no price
 
         // to interact with Dhan Broker API-
 
@@ -59,15 +58,17 @@ public class DhanBrokerApiClient {
 
         // Handle the response
         if (response.getStatusCode().is2xxSuccessful()) {
-            System.out.println("Order placed successfully: " + response.getBody());
+            logger.info("Order placed successfully: " + response.getBody());
+            return "Order placed successfully";
         } else {
-            System.err.println("Failed to place order: " + response.getStatusCode() + " - " + response.getBody());
+            logger.info("Failed to place order: " + response.getStatusCode() + " - " + response.getBody());
+            return "Failed to place order";
         }
 
     }
 
-    @Retry(name = "dhanApi")
-    @RateLimiter(name = "dhanApi")
+
+//    @RateLimiter(name = "dhanApi")
     public double getCurrentMarketPrice(String symbolId) {
         String url = baseUrl + "/market-price/" + symbolId;
         RestTemplate restTemplate = new RestTemplate();
@@ -85,16 +86,16 @@ public class DhanBrokerApiClient {
         }
     }
 
-    @Retry(name = "dhanApi")
-    @RateLimiter(name = "dhanApi")
+
+//    @RateLimiter(name = "dhanApi")
     // Method to close multiple trades at once
     public void closeAllOpenTrades(List<Trades> openTrades) {
         String endpoint = baseUrl + "/closeAllTrades"; // Adjust endpoint as necessary-get correct api
         CloseTradesRequest request = new CloseTradesRequest(openTrades);// Construct request payload
         restTemplate.postForObject(endpoint, request, Void.class);// Make the API call
     }
-    @Retry(name = "dhanApi")
-    @RateLimiter(name = "dhanApi")
+
+//    @RateLimiter(name = "dhanApi")
     // Method to close a single trade
     public void closeTrade(String symbolId, int quantity) {
         String endpoint = baseUrl + "/closeTrade"; // Adjust endpoint as necessary-get correct api

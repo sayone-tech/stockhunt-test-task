@@ -1,4 +1,4 @@
-package com.task.tradingAutomation.Entity;
+package com.task.tradingAutomation.entity;
 
 import jakarta.persistence.*;
 
@@ -43,6 +43,8 @@ public class Trades {
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+
 
     public Long getId() {
         return id;
@@ -139,4 +141,5 @@ public class Trades {
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
     }
+
 }
