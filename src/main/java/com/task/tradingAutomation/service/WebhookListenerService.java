@@ -1,7 +1,6 @@
 package com.task.tradingAutomation.service;
 
 import com.task.tradingAutomation.dto.TradingAlertRequest;
-import com.task.tradingAutomation.dto.TradingAlertRequest;
 import com.task.tradingAutomation.exception.UserDefinedExceptions;
 import com.task.tradingAutomation.util.PayloadValidator;
 import org.slf4j.Logger;
