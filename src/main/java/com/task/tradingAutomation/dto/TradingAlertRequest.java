@@ -25,8 +25,8 @@ public class TradingAlertRequest {
     @JsonProperty("Maxdayriskamount")
     private float maxDayRiskAmount;
 
-    private String orderType; // "market" or "stop_loss"
-    private double price; // Use for stop loss orders
+//    private String orderType; // "market" or "stop_loss"
+//    private double price; // Use for stop loss orders
 
     public String getStrategyName() {
         return strategyName;
@@ -84,19 +84,19 @@ public class TradingAlertRequest {
         this.maxDayRiskAmount = maxDayRiskAmount;
     }
 
-    public String getOrderType() {
-        return orderType;
-    }
-
-    public void setOrderType(String orderType) {
-        this.orderType = orderType;
-    }
-
-    public double getPrice() {
-        return price;
-    }
-
-    public void setPrice(double price) {
-        this.price = price;
-    }
+//    public String getOrderType() {
+//        return orderType;
+//    }
+//
+//    public void setOrderType(String orderType) {
+//        this.orderType = orderType;
+//    }
+//
+//    public double getPrice() {
+//        return price;
+//    }
+//
+//    public void setPrice(double price) {
+//        this.price = price;
+//    }
 }

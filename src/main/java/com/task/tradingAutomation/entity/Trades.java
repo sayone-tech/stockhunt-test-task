@@ -1,5 +1,6 @@
 package com.task.tradingAutomation.entity;
 
+import com.task.tradingAutomation.enums.TradeStatus;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
@@ -33,10 +34,14 @@ public class Trades {
     private float entryPrice;
 
     @Column(name = "stop_loss_price")
-    private Float stopLossPrice;
+    private float stopLossPrice;
 
+    @Column(name = "order_type")
+    private String orderType;
+
+    @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private String status;
+    private TradeStatus status;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
@@ -44,6 +49,11 @@ public class Trades {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @Column(name = "order_status", nullable = false)
+    private String orderStatus;
+
+    @Column(name = "order_id", nullable = false)
+    private String orderId;
 
 
     public Long getId() {
@@ -110,19 +120,28 @@ public class Trades {
         this.entryPrice = entryPrice;
     }
 
-    public Float getStopLossPrice() {
+    public float getStopLossPrice() {
         return stopLossPrice;
     }
 
-    public void setStopLossPrice(Float stopLossPrice) {
+    public void setStopLossPrice(float stopLossPrice) {
         this.stopLossPrice = stopLossPrice;
     }
 
-    public String getStatus() {
+
+    public String getOrderType() {
+        return orderType;
+    }
+
+    public void setOrderType(String orderType) {
+        this.orderType = orderType;
+    }
+
+    public TradeStatus getStatus() {
         return status;
     }
 
-    public void setStatus(String status) {
+    public void setStatus(TradeStatus status) {
         this.status = status;
     }
 
@@ -142,4 +161,19 @@ public class Trades {
         this.updatedAt = updatedAt;
     }
 
+    public String getOrderStatus() {
+        return orderStatus;
+    }
+
+    public void setOrderStatus(String orderStatus) {
+        this.orderStatus = orderStatus;
+    }
+
+    public String getOrderId() {
+        return orderId;
+    }
+
+    public void setOrderId(String orderId) {
+        this.orderId = orderId;
+    }
 }

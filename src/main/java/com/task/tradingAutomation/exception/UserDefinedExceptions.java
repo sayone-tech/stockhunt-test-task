@@ -15,4 +15,10 @@ public class UserDefinedExceptions {
             super(message);
         }
     }
+
+    public static class TradeNotPlacedException extends RuntimeException {
+        public TradeNotPlacedException(String message) {
+            super(message);
+        }
+    }
 }

@@ -1,6 +1,7 @@
 package com.task.tradingAutomation.repository;
 
 import com.task.tradingAutomation.entity.Trades;
+import com.task.tradingAutomation.enums.TradeStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -14,5 +15,5 @@ public interface TradeRepository extends JpaRepository<Trades, Long> {
     Trades findLatestBySymbolIdAndStatus(String symbolId,String status);
 
     @Query("SELECT t FROM Trades t WHERE t.status = :status")
-    List<Trades> findByStatus(String status);
+    List<Trades> findByStatus(TradeStatus status);
 }

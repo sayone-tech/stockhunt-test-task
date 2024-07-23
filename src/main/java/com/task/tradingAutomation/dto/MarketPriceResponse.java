@@ -1,13 +1,13 @@
 package com.task.tradingAutomation.dto;
 
 public class MarketPriceResponse {
-    private double price;
+    private float price;
 
-    public double getPrice() {
+    public float getPrice() {
         return price;
     }
 
-    public void setPrice(double price) {
+    public void setPrice(float price) {
         this.price = price;
     }
 
