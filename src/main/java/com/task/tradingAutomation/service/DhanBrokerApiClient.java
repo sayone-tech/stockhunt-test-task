@@ -1,22 +1,27 @@
 package com.task.tradingAutomation.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.task.tradingAutomation.entity.Trades;
 import com.task.tradingAutomation.dto.*;
+import com.task.tradingAutomation.enums.TradeStatus;
+import com.task.tradingAutomation.repository.TradeRepository;
 import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.LocalDateTime;
+import java.util.*;
 
 
 @Service
@@ -36,6 +41,12 @@ public class DhanBrokerApiClient {
     @Value("${dhan.api.url}")
     private String baseUrl;
 
+    @Value("${dhan.api.access-token}")
+    private String accessToken;
+
+    @Autowired
+    TradeRepository tradeRepository;
+
 
     @RateLimiter(name = "dhanApi")
     public Map<String,Object> placeTradeOrder(Trades newTrade) throws JsonProcessingException {
@@ -50,7 +61,7 @@ public class DhanBrokerApiClient {
         orderRequest.setValidity(DhanOrderRequest.Validity.DAY);
         orderRequest.setSecurityId(newTrade.getSymbolId());
         orderRequest.setQuantity(newTrade.getQuantity());
-        orderRequest.setPrice(newTrade.getEntryPrice()); //Price at which order is placed
+//        orderRequest.setPrice(newTrade.getEntryPrice()); //Price at which order is placed not considering as of now
         orderRequest.setTriggerPrice(newTrade.getStopLossPrice());
 
         // to interact with Dhan Broker API-
@@ -82,7 +93,6 @@ public class DhanBrokerApiClient {
         }
 
     }
-
 
     public float getCurrentMarketPrice(String symbolId) {
         String url = baseUrl + "/market-price/" + symbolId;
@@ -117,41 +127,10 @@ public class DhanBrokerApiClient {
         restTemplate.postForObject(endpoint, request, Void.class);//api call
     }
 
-//    public float placeBuyOrSellOrder(OrderAlert alert) throws Exception {
-//
-//        String url = baseUrl + "/orders";
-//        RestTemplate restTemplate = new RestTemplate();
-//        HttpHeaders headers = new HttpHeaders();
-//        headers.set("Authorization", "Bearer " + apiKey);
-//        headers.set("Content-Type", "application/json");
-//
-//        // Construct the request body
-//
-//        DhanOrderRequest orderRequest = new DhanOrderRequest();
-//        orderRequest.setDhanClientId(userId);
-//        orderRequest.setTransactionType(DhanOrderRequest.TransactionType.BUY);
-//        orderRequest.setSecurityId(alert.getSymbolId());
-//        orderRequest.setQuantity(alert.getQuantity());
-//        orderRequest.setPrice(alert.getPrice()); //Price at which order is placed
-//
-//        HttpEntity<DhanOrderRequest> requestEntity = new HttpEntity<>(orderRequest, headers);// Create the HTTP entity with headers and body
-//        ResponseEntity<String> response = restTemplate.postForEntity(url, requestEntity, String.class); // Send the POST request
-//
-//        if (response.getStatusCode() == HttpStatus.OK) {
-//            ObjectMapper objectMapper = new ObjectMapper();
-//            JsonNode responseBody = objectMapper.readTree(response.getBody());
-//
-//            // Extract the filled price from the response
-//            float filledPrice = responseBody.get("filledPrice").floatValue(); // Adjust based on the actual response structure
-//            return filledPrice;
-//        } else {
-//            throw new Exception("Failed to place buy order: " + response.getStatusCode());
-//        }
-//    }
-
+    // Method to get a single trade
     public Map<String,Object> getTradeOrder(String orderId) throws JsonProcessingException {
 
-        String url = baseUrl + "/orders/" +orderId;
+        String url = baseUrl + "/trades/" +orderId;
         RestTemplate restTemplate = new RestTemplate();
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", "Bearer " + apiKey);
@@ -167,7 +146,6 @@ public class DhanBrokerApiClient {
         if (response.getStatusCode().is2xxSuccessful()) {
             logger.info("Order placed successfully: " + response.getBody());
             responseMap.put("tradedPrice",responseBody.path("tradedPrice").asText());
-            responseMap.put("triggerPrice",responseBody.path("triggerPrice").asText());
             return responseMap;
         } else {
             logger.info("Failed to place order: " + response.getStatusCode() + " - " + response.getBody());
@@ -176,4 +154,83 @@ public class DhanBrokerApiClient {
         }
 
     }
+
+    public List<Map<String, Object>> fetchOrders() {
+        String url = baseUrl + "/orders";
+        RestTemplate restTemplate = new RestTemplate();
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer " + apiKey);
+        headers.set("Content-Type", "application/json");
+        headers.set("access-token", accessToken);
+        HttpEntity<Void> requestEntity = new HttpEntity<>(headers); // No request body needed for GET
+        ResponseEntity<String> response;
+
+        try {
+            response = restTemplate.exchange(url, HttpMethod.GET, requestEntity, String.class);
+        } catch (HttpClientErrorException | HttpServerErrorException e) {
+            logger.error("HTTP error occurred while fetching orders: " + e.getStatusCode() + " - " + e.getResponseBodyAsString(), e);
+            return Collections.emptyList(); // Return empty list on error
+        } catch (Exception e) {
+            logger.error("Unexpected error occurred while fetching orders: " + e.getMessage(), e);
+            return Collections.emptyList(); // Return empty list on unexpected error
+        }
+
+        List<Map<String, Object>> responseList = new ArrayList<>();
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode responseBody;
+
+        try {
+            responseBody = objectMapper.readTree(response.getBody());
+        } catch (JsonProcessingException e) {
+            logger.error("Error processing JSON response: " + e.getMessage(), e);
+            return Collections.emptyList(); // Return empty list if JSON processing fails
+        }
+
+        if (response.getStatusCode().is2xxSuccessful()) {
+            logger.info("Orders fetched successfully.");
+
+            // Directly add the orders to the responseList
+            if (responseBody.isArray()) {
+                for (JsonNode orderNode : responseBody) {
+                    responseList.add(objectMapper.convertValue(orderNode, new TypeReference<Map<String, Object>>() {}));
+                }
+            }
+        } else {
+            logger.error("Failed to fetch orders: " + response.getStatusCode() + " - " + response.getBody());
+            // Return empty list on failure
+            return Collections.emptyList();
+        }
+
+        return responseList;
     }
+
+
+    public void convertStopLossToMarket(Map<String, Object> order) {
+        try {
+            // Fetch the current market price for the security
+            float marketPrice = getCurrentMarketPrice(order.get("securityId").toString());
+
+            // Find the trade by orderId from database
+            Trades newTrade = tradeRepository.findByOrderId(order.get("orderId").toString());
+
+            // Update trade details
+            newTrade.setOrderType(DhanOrderRequest.OrderType.MARKET.toString());
+            newTrade.setAction(DhanOrderRequest.TransactionType.SELL.toString());
+
+            // Place the trade order to dhan api to sell
+            Map<String, Object> response = placeTradeOrder(newTrade);
+
+            //if order executed square of position and save
+            if ("Success".equals(response.get("status"))) {
+                logger.info("Trade order placed successfully. Order ID: " + response.get("orderId"));
+                newTrade.setStatus(TradeStatus.CLOSE);
+                tradeRepository.save(newTrade);
+            } else {
+                logger.error("Failed to place trade order. Order ID: " + response.get("orderId"));
+            }
+        } catch (Exception e) {
+            logger.error("Error converting stop-loss to market: " + e.getMessage(), e);
+        }
+    }
+
+}

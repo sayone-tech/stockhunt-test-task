@@ -1,10 +1,12 @@
 package com.task.tradingAutomation.service;
 
 import com.task.tradingAutomation.config.TradingConfig;
+import com.task.tradingAutomation.dto.DhanOrderRequest;
 import com.task.tradingAutomation.dto.TradingAlertRequest;
 import com.task.tradingAutomation.entity.RiskData;
 import com.task.tradingAutomation.entity.Trades;
 import com.task.tradingAutomation.enums.TradeStatus;
+import com.task.tradingAutomation.exception.UserDefinedExceptions;
 import com.task.tradingAutomation.repository.RiskDataRepository;
 import com.task.tradingAutomation.repository.TradeRepository;
 import org.slf4j.Logger;
@@ -12,7 +14,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class RiskManagementService {
@@ -32,13 +37,13 @@ public class RiskManagementService {
     private TradingConfig tradingConfig;
 
 
-    private double maxDayRiskAmount;
+    private float maxDayRiskAmount;
 
     public void setMaxDayRiskAmount(TradingAlertRequest tradingAlert) {
         maxDayRiskAmount =tradingAlert.getMaxDayRiskAmount();
     }
-    public double getMaxDayRiskAmount() {
-        return maxDayRiskAmount;
+    public float getMaxDayRiskAmount() {
+        return  maxDayRiskAmount;
     }
 
     //Per-Trade get stop loss
@@ -58,89 +63,130 @@ public class RiskManagementService {
     }
 
 
-    private void updateRiskData(float cumulativeRisk) {
+
+//    //manage trade risk
+//    public void manageRisk(Trades trade) {
+//        float tradeRisk = calculateTradeRisk(trade);
+//        float currentDayRisk = calculateCurrentDayRisk();
+//        float totalRisk = tradeRisk + currentDayRisk;
+//
+//        try {
+//            monitorRisk(totalRisk);
+//        } catch (UserDefinedExceptions.RiskExceededException e) {
+//            logger.error("Risk exceeded limit: {}", e.getMessage());
+//        }
+//
+//        updateRiskData(tradeRisk);
+//    }
+
+    //update risk data
+    public void updateRiskData(float tradeRisk) {
+        LocalDateTime startOfDay = LocalDateTime.now(ZoneId.systemDefault()).with(LocalTime.MIN);
+        LocalDateTime endOfDay = LocalDateTime.now(ZoneId.systemDefault()).with(LocalTime.MAX);
+
+        Optional<Float> latestRiskOpt = riskDataRepository.findLatestCumulativeRiskForToday(startOfDay, endOfDay);
+
         RiskData riskData = new RiskData();
-        // Set the values
-        riskData.setCumulativeRisk(cumulativeRisk);
         riskData.setDate(LocalDateTime.now());
-        // Save the RiskData for next evaluation
+
+        float updatedRisk;
+        if (latestRiskOpt.isPresent()) {
+            // Update existing risk data
+            updatedRisk = latestRiskOpt.get() + tradeRisk;
+        } else {
+            // Create a new risk data entry for today
+            updatedRisk = tradeRisk;
+        }
+
+        riskData.setCumulativeRisk(updatedRisk);
+
+        // Save the RiskData
         riskDataRepository.save(riskData);
     }
 
+    //to get the latest cumulative risk of the day
+    public float calculateCurrentDayRisk() {
+        LocalDateTime startOfDay = LocalDateTime.now(ZoneId.systemDefault()).with(LocalTime.MIN);
+        LocalDateTime endOfDay = LocalDateTime.now(ZoneId.systemDefault()).with(LocalTime.MAX);
 
-
-    public float calculateTotalRisk() {
-        float totalRisk = 0.0f;
-        List<Trades> openTrades = tradeRepository.findByStatus(TradeStatus.OPEN);
-        try {
-            for (Trades trade : openTrades) {
-                float tradeRisk = calculateTradeRisk(trade);
-                totalRisk += tradeRisk;
-            }
-            updateRiskData(totalRisk);
-            logger.info("Total calculated risk: ${}", totalRisk);
-        } catch (Exception e) {
-            logger.error("Error calculating total risk: " + e.getMessage(), e);
-        }
-        return totalRisk;
+        return riskDataRepository.findLatestCumulativeRiskForToday(startOfDay, endOfDay)
+                .orElse(0.0f); // Return 0 if no cumulative risk found
     }
-
 
     public float calculateTradeRisk(Trades trade) {
         float entryPrice = trade.getEntryPrice();
         float stopLossPrice = trade.getStopLossPrice();
         int quantity = trade.getQuantity();
         float riskPerShare;
+
         if ("SELL".equalsIgnoreCase(trade.getAction())) {
-            riskPerShare = stopLossPrice - entryPrice; // For short positions
+            riskPerShare = entryPrice - stopLossPrice; // For short positions
         } else {
-            riskPerShare = entryPrice - stopLossPrice; // For long positions
+            riskPerShare = stopLossPrice - entryPrice; // For long positions
         }
 
-        float tradeRisk = riskPerShare * quantity;
-
-        return tradeRisk;
+        return riskPerShare * quantity;
     }
 
 
-    public void closeOpenTrades() {
-        List<Trades> openTrades = tradeRepository.findByStatus(TradeStatus.OPEN);
-        dhanBrokerApiClient.closeAllOpenTrades(openTrades);//get the api to close all open trades
-        for (Trades trade : openTrades) {
-            try {
-                trade.setStatus(TradeStatus.CLOSE);
-                tradeRepository.save(trade);
-            } catch (Exception e) {
-                logger.error("Error closing trade for symbol: " + trade.getSymbolId() + ", " + e.getMessage());
-            }
+
+
+//    public float calculateTotalRisk() {
+//        float totalRisk = 0.0f;
+//        List<Trades> openTrades = tradeRepository.findByStatusAndOrderType(TradeStatus.OPEN, DhanOrderRequest.OrderType.STOP_LOSS);
+//        try {
+//            for (Trades trade : openTrades) {
+//                float tradeRisk = calculateTradeRisk(trade);
+//                totalRisk += tradeRisk;
+//            }
+//            updateRiskData(totalRisk);
+//            logger.info("Total calculated risk: ${}", totalRisk);
+//        } catch (Exception e) {
+//            logger.error("Error calculating total risk: " + e.getMessage(), e);
+//        }
+//        return totalRisk;
+//    }
+
+
+
+
+
+//    public void closeOpenTrades() {
+//        List<Trades> openTrades = tradeRepository.findByStatus(TradeStatus.OPEN);
+//        dhanBrokerApiClient.closeAllOpenTrades(openTrades);//get the api to close all open trades
+//        for (Trades trade : openTrades) {
+//            try {
+//                trade.setStatus(TradeStatus.CLOSE);
+//                tradeRepository.save(trade);
+//            } catch (Exception e) {
+//                logger.error("Error closing trade for symbol: " + trade.getSymbolId() + ", " + e.getMessage());
+//            }
+//        }
+//        System.out.println("Closed all open trades to limit risk.");
+//    }
+
+
+    // Monitor the risk and return a boolean indicating if the risk is within acceptable limits
+    public boolean monitorRisk(float totalRisk) {
+        if (totalRisk > maxDayRiskAmount) {
+            logger.warn("Total risk exposure exceeds the maximum daily risk amount of ${}", maxDayRiskAmount);
+            takeCorrectiveActions();
+            return false;
+        } else {
+            logger.info("Total risk exposure is within acceptable limits: ${}", totalRisk);
+            return true;
         }
-        System.out.println("Closed all open trades to limit risk.");
     }
 
-    public void monitorAndManageRisk() {
-        try {
-            // Calculate total risk exposure
-            float totalRisk = calculateTotalRisk();
 
-            // Compare with maximum daily risk amount
-            if (totalRisk > maxDayRiskAmount) {
-                logger.warn("Total risk exposure exceeds the maximum daily risk amount of ${}", maxDayRiskAmount);
-                // Implement corrective actions
-                takeCorrectiveActions();
-            } else {
-                logger.info("Total risk exposure is within acceptable limits: ${}", totalRisk);
-            }
-        } catch (Exception e) {
-            logger.error("Error monitoring and managing risk: " + e.getMessage(), e);
-        }
-    }
+
 
     private void takeCorrectiveActions() {
         try {
             // Implement corrective actions such as halting new trades or notifying users
             logger.info("Taking corrective actions due to high risk exposure.");
             // Example action: Closing all open trades
-            List<Trades> openTrades = tradeRepository.findByStatus(TradeStatus.OPEN);
+            List<Trades> openTrades = tradeRepository.findByStatusAndOrderType(TradeStatus.OPEN, DhanOrderRequest.OrderType.STOP_LOSS);
             dhanBrokerApiClient.closeAllOpenTrades(openTrades);
             // Disable new trades
             disableNewTrades();
@@ -164,8 +210,13 @@ public class RiskManagementService {
     private void alertUser() {
         // Logic to alert the user about high risk exposure
         logger.info("User has been alerted about the high risk exposure.");
-        // Example: Send an email or push notification to the user
+        //Send an email or push notification to the user
     }
 
 
+    public boolean monitorCurrentDayRisk() {
+        float currentDayRisk = calculateCurrentDayRisk();
+        monitorRisk(currentDayRisk);
+        return monitorRisk(currentDayRisk);
+    }
 }

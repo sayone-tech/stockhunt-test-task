@@ -29,6 +29,9 @@ public class OrderExecutionService {
     @Autowired
     private TradeRepository tradeRepository;
 
+    private static final int MAX_RETRIES = 30; // Max number of retries
+    private static final int RETRY_DELAY_MS = 2000; // Delay between retries
+
     public void executeOrder(TradingAlertRequest tradingAlert) {
 
 
@@ -62,7 +65,7 @@ public class OrderExecutionService {
 
 
     private void closeCurrentPosition(Trades currentTrade) {
-        closeTrade(currentTrade);
+//        closeTrade(currentTrade);
         currentTrade.setStatus(TradeStatus.CLOSE);
         currentTrade.setUpdatedAt(LocalDateTime.now());
         tradeRepository.save(currentTrade);
@@ -95,48 +98,84 @@ public class OrderExecutionService {
 
     public void placeOrder(Trades newTrade) {
         try {
-            float marketPrice = dhanBrokerApiClient.getCurrentMarketPrice(newTrade.getSymbolId()); // Get market price
-            // Step 1: Place Buy Order
-            if (newTrade.getAction().equalsIgnoreCase("buy")) {
-                // Execute the buy order
-                Map<String, Object>purchaseOrderMap = placeMarketOrder(newTrade, DhanOrderRequest.TransactionType.BUY.toString());
-                String orderId = purchaseOrderMap.get("orderId").toString();
-                newTrade.setOrderId(orderId);
-                newTrade.setOrderStatus(purchaseOrderMap.get("orderStatus").toString());
-                Map<String,Object>response = dhanBrokerApiClient.getTradeOrder(orderId);
-                float entryPrice = (float) response.get("tradedPrice");
+            boolean tradeAllowed = riskManagementService.monitorCurrentDayRisk();
+            if(tradeAllowed) {
 
-                // Per-Trade Risk Management - Calculate and set stop-loss price
-                float stopLossPrice = riskManagementService.calculateStopLossPrice(newTrade.getSlPerTradePercent(),
-                        entryPrice,newTrade.getAction());
-                float buffer = 0.01f;
-                float bufferedStopLossPrice = stopLossPrice * (1 - buffer);
-                newTrade.setStopLossPrice(bufferedStopLossPrice);
-                placeStopLossOrder(newTrade);
-            } else if (newTrade.getAction().equalsIgnoreCase("sell")) {
-                // Place sell order
-                Map<String, Object>sellOrderMap =placeMarketOrder(newTrade, DhanOrderRequest.TransactionType.SELL.toString());
-                newTrade.setOrderId(sellOrderMap.get("orderId").toString());
-                newTrade.setOrderStatus(sellOrderMap.get("orderStatus").toString());
+                // Step 1: Place Buy Order
+                if (newTrade.getAction().equalsIgnoreCase("buy")) {
+                    // Execute the buy order
+                    Map<String, Object> purchaseOrderMap = placeMarketOrder(newTrade, DhanOrderRequest.TransactionType.BUY.toString());
+                    String orderId = purchaseOrderMap.get("orderId").toString();
+                    newTrade.setOrderId(orderId);
+                    newTrade.setOrderStatus(purchaseOrderMap.get("orderStatus").toString());
+                    newTrade.setOrderType(DhanOrderRequest.OrderType.MARKET.toString());
 
-                // Risk Management - Calculate and set stop-loss for the sell position
-                float stopLossPrice = riskManagementService.calculateStopLossPrice(newTrade.getSlPerTradePercent(),
-                        marketPrice,newTrade.getAction());
-                float buffer = 0.01f;
-                float bufferedStopLossPrice = stopLossPrice * (1 + buffer); // Increase for short protection
-                newTrade.setStopLossPrice(bufferedStopLossPrice);
-                placeStopLossOrder(newTrade);
+                    // Poll for order status to become "TRADED"
+                    boolean isTraded = pollOrderStatus(orderId); //check whether placed order status change to "traded"
+                    if (!isTraded) {
+                        throw new UserDefinedExceptions.TradeNotPlacedException("Order did not reach 'TRADED' status within the allowed time.");
+                    }
+                    Map<String, Object> response = dhanBrokerApiClient.getTradeOrder(orderId);
+                    float tradedPrice = (float) response.get("tradedPrice");
+
+                    // Per-Trade Risk Management - Calculate and set stop-loss price
+                    float stopLossPrice = riskManagementService.calculateStopLossPrice(newTrade.getSlPerTradePercent(),
+                            tradedPrice, newTrade.getAction());
+                    float buffer = 0.01f;
+                    float bufferedStopLossPrice = stopLossPrice * (1 - buffer);
+                    newTrade.setStopLossPrice(bufferedStopLossPrice);
+                    newTrade.setOrderType(DhanOrderRequest.OrderType.STOP_LOSS.toString());
+                    // Monitor and Manage Risk -update total risk and check
+                    placeStopLossOrder(newTrade);
+                } else if (newTrade.getAction().equalsIgnoreCase("sell")) {
+                    // Place sell order
+                    Map<String, Object> sellOrderMap = placeMarketOrder(newTrade, DhanOrderRequest.TransactionType.SELL.toString());
+                    String orderId = sellOrderMap.get("orderId").toString();
+                    newTrade.setOrderId(orderId);
+                    newTrade.setOrderStatus(sellOrderMap.get("orderStatus").toString());
+                    newTrade.setOrderType(DhanOrderRequest.OrderType.MARKET.toString());
+
+                    // Poll for order status to become "TRADED"
+                    boolean isTraded = pollOrderStatus(orderId);
+                    if (!isTraded) {
+                        throw new UserDefinedExceptions.TradeNotPlacedException("Order did not reach 'TRADED' status within the allowed time.");
+                    }
+                    Map<String, Object> response = dhanBrokerApiClient.getTradeOrder(orderId);
+                    float tradedPrice = (float) response.get("tradedPrice");
+                    // Risk Management - Calculate and set stop-loss for the sell position
+                    float stopLossPrice = riskManagementService.calculateStopLossPrice(newTrade.getSlPerTradePercent(),
+                            tradedPrice, newTrade.getAction());
+                    float buffer = 0.01f;
+                    float bufferedStopLossPrice = stopLossPrice * (1 + buffer); // Increase for short protection
+                    newTrade.setStopLossPrice(bufferedStopLossPrice);
+                    newTrade.setOrderType(DhanOrderRequest.OrderType.MARKET.toString());
+                    // Monitor and Manage Risk -update total risk and check
+                    placeStopLossOrder(newTrade);
+                }
+
+            }else {
+                throw new UserDefinedExceptions.TradeNotAllowedException("Trade not allowed: The trade exceeds the risk" +
+                        " management limits.");
             }
-
-            // Monitor and Manage Risk -update total risk and check
-            riskManagementService.monitorAndManageRisk();
-
-
         } catch (Exception e) {
             // Log the exception and handle it as necessary
             System.err.println("Error placing order: " + e.getMessage());
             throw new UserDefinedExceptions.TradeNotPlacedException("Trade order placement failed");
         }
+    }
+
+    private boolean pollOrderStatus(String orderId) throws InterruptedException, JsonProcessingException {
+        int retries = 0;
+        while (retries < MAX_RETRIES) {
+            Map<String, Object> orderResponse = dhanBrokerApiClient.getTradeOrder(orderId);
+            String orderStatus = (String) orderResponse.get("orderStatus");
+            if ("TRADED".equalsIgnoreCase(orderStatus)) {
+                return true;
+            }
+            Thread.sleep(RETRY_DELAY_MS);
+            retries++;
+        }
+        return false;
     }
 
     private Map<String, Object> placeMarketOrder(Trades trade, String actionType) throws UserDefinedExceptions.TradeNotPlacedException {
@@ -168,22 +207,22 @@ public class OrderExecutionService {
     }
 
 
-    public void closeTrade(Trades trade) {
-        try {
-            // Assuming Dhan API has a method to close single trade
-            dhanBrokerApiClient.closeTrade(trade.getSymbolId(), trade.getQuantity());
-
-            // Update the trade status and timestamp
-            trade.setStatus(TradeStatus.CLOSE);
-            trade.setUpdatedAt(LocalDateTime.now());
-
-            // Save the updated status trade to the repository
-            tradeRepository.save(trade);
-        } catch (Exception e) {
-            e.printStackTrace();
-            logger.error("Error closing trade for symbol: " + trade.getSymbolId() + ", " + e.getMessage());
-        }
-    }
+//    public void closeTrade(Trades trade) {
+//        try {
+//            // Assuming Dhan API has a method to close single trade
+//            dhanBrokerApiClient.closeTrade(trade.getSymbolId(), trade.getQuantity());
+//
+//            // Update the trade status and timestamp
+//            trade.setStatus(TradeStatus.CLOSE);
+//            trade.setUpdatedAt(LocalDateTime.now());
+//
+//            // Save the updated status trade to the repository
+//            tradeRepository.save(trade);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            logger.error("Error closing trade for symbol: " + trade.getSymbolId() + ", " + e.getMessage());
+//        }
+//    }
 
 
 }
