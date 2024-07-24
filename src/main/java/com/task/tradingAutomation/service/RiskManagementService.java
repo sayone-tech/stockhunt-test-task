@@ -64,21 +64,6 @@ public class RiskManagementService {
 
 
 
-//    //manage trade risk
-//    public void manageRisk(Trades trade) {
-//        float tradeRisk = calculateTradeRisk(trade);
-//        float currentDayRisk = calculateCurrentDayRisk();
-//        float totalRisk = tradeRisk + currentDayRisk;
-//
-//        try {
-//            monitorRisk(totalRisk);
-//        } catch (UserDefinedExceptions.RiskExceededException e) {
-//            logger.error("Risk exceeded limit: {}", e.getMessage());
-//        }
-//
-//        updateRiskData(tradeRisk);
-//    }
-
     //update risk data
     public void updateRiskData(float tradeRisk) {
         LocalDateTime startOfDay = LocalDateTime.now(ZoneId.systemDefault()).with(LocalTime.MIN);
@@ -129,41 +114,6 @@ public class RiskManagementService {
     }
 
 
-
-
-//    public float calculateTotalRisk() {
-//        float totalRisk = 0.0f;
-//        List<Trades> openTrades = tradeRepository.findByStatusAndOrderType(TradeStatus.OPEN, DhanOrderRequest.OrderType.STOP_LOSS);
-//        try {
-//            for (Trades trade : openTrades) {
-//                float tradeRisk = calculateTradeRisk(trade);
-//                totalRisk += tradeRisk;
-//            }
-//            updateRiskData(totalRisk);
-//            logger.info("Total calculated risk: ${}", totalRisk);
-//        } catch (Exception e) {
-//            logger.error("Error calculating total risk: " + e.getMessage(), e);
-//        }
-//        return totalRisk;
-//    }
-
-
-
-
-
-//    public void closeOpenTrades() {
-//        List<Trades> openTrades = tradeRepository.findByStatus(TradeStatus.OPEN);
-//        dhanBrokerApiClient.closeAllOpenTrades(openTrades);//get the api to close all open trades
-//        for (Trades trade : openTrades) {
-//            try {
-//                trade.setStatus(TradeStatus.CLOSE);
-//                tradeRepository.save(trade);
-//            } catch (Exception e) {
-//                logger.error("Error closing trade for symbol: " + trade.getSymbolId() + ", " + e.getMessage());
-//            }
-//        }
-//        System.out.println("Closed all open trades to limit risk.");
-//    }
 
 
     // Monitor the risk and return a boolean indicating if the risk is within acceptable limits
