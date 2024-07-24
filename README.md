@@ -1,0 +1,1 @@
+# stockhunt-test-task
