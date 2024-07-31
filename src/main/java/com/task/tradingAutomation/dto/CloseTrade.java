@@ -1,5 +1,11 @@
 package com.task.tradingAutomation.dto;
 
+
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
 public class CloseTrade {
     private String symbolId;
     private int quantity;
@@ -9,20 +15,5 @@ public class CloseTrade {
         this.quantity = quantity;
     }
 
-    public String getSymbolId() {
-        return symbolId;
-    }
-
-    public void setSymbolId(String symbolId) {
-        this.symbolId = symbolId;
-    }
-
-    public int getQuantity() {
-        return quantity;
-    }
-
-    public void setQuantity(int quantity) {
-        this.quantity = quantity;
-    }
 }
 

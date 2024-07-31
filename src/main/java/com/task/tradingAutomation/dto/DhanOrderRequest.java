@@ -1,5 +1,10 @@
 package com.task.tradingAutomation.dto;
 
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
 public class DhanOrderRequest {
     private String dhanClientId;
     private TransactionType transactionType;
@@ -33,84 +38,4 @@ public class DhanOrderRequest {
         DAY, IOC
     }
 
-
-    public String getDhanClientId() {
-        return dhanClientId;
-    }
-
-    public void setDhanClientId(String dhanClientId) {
-        this.dhanClientId = dhanClientId;
-    }
-
-    public TransactionType getTransactionType() {
-        return transactionType;
-    }
-
-    public void setTransactionType(TransactionType transactionType) {
-        this.transactionType = transactionType;
-    }
-
-    public ExchangeSegment getExchangeSegment() {
-        return exchangeSegment;
-    }
-
-    public void setExchangeSegment(ExchangeSegment exchangeSegment) {
-        this.exchangeSegment = exchangeSegment;
-    }
-
-    public ProductType getProductType() {
-        return productType;
-    }
-
-    public void setProductType(ProductType productType) {
-        this.productType = productType;
-    }
-
-    public OrderType getOrderType() {
-        return orderType;
-    }
-
-    public void setOrderType(OrderType orderType) {
-        this.orderType = orderType;
-    }
-
-    public Validity getValidity() {
-        return validity;
-    }
-
-    public void setValidity(Validity validity) {
-        this.validity = validity;
-    }
-
-    public String getSecurityId() {
-        return securityId;
-    }
-
-    public void setSecurityId(String securityId) {
-        this.securityId = securityId;
-    }
-
-    public int getQuantity() {
-        return quantity;
-    }
-
-    public void setQuantity(int quantity) {
-        this.quantity = quantity;
-    }
-
-    public float getPrice() {
-        return price;
-    }
-
-    public void setPrice(float price) {
-        this.price = price;
-    }
-
-    public float getTriggerPrice() {
-        return triggerPrice;
-    }
-
-    public void setTriggerPrice(float triggerPrice) {
-        this.triggerPrice = triggerPrice;
-    }
 }

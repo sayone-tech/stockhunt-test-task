@@ -21,4 +21,10 @@ public class UserDefinedExceptions {
             super(message);
         }
     }
+
+    public static class MarketDataRetrievalException extends RuntimeException {
+        public MarketDataRetrievalException(String message, Throwable cause) {
+            super(message, cause);
+        }
+    }
 }

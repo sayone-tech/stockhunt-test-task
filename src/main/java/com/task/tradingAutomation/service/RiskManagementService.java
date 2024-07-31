@@ -6,7 +6,6 @@ import com.task.tradingAutomation.dto.TradingAlertRequest;
 import com.task.tradingAutomation.entity.RiskData;
 import com.task.tradingAutomation.entity.Trades;
 import com.task.tradingAutomation.enums.TradeStatus;
-import com.task.tradingAutomation.exception.UserDefinedExceptions;
 import com.task.tradingAutomation.repository.RiskDataRepository;
 import com.task.tradingAutomation.repository.TradeRepository;
 import org.slf4j.Logger;

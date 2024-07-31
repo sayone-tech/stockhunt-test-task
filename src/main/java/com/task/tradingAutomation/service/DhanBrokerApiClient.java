@@ -20,13 +20,12 @@ import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
-import java.time.LocalDateTime;
 import java.util.*;
 
 
 @Service
 public class DhanBrokerApiClient {
-    private static final Logger logger = LoggerFactory.getLogger(OrderExecutionService.class);
+    private static final Logger logger = LoggerFactory.getLogger(DhanBrokerApiClient.class);
 
 
     private final RestTemplate restTemplate = new RestTemplate();
@@ -47,6 +46,9 @@ public class DhanBrokerApiClient {
     @Autowired
     TradeRepository tradeRepository;
 
+    @Autowired
+    MarketDataService marketDataService;
+
 
     @RateLimiter(name = "dhanApi")
     public Map<String,Object> placeTradeOrder(Trades newTrade) throws JsonProcessingException {
@@ -61,7 +63,7 @@ public class DhanBrokerApiClient {
         orderRequest.setValidity(DhanOrderRequest.Validity.DAY);
         orderRequest.setSecurityId(newTrade.getSymbolId());
         orderRequest.setQuantity(newTrade.getQuantity());
-//        orderRequest.setPrice(newTrade.getEntryPrice()); //Price at which order is placed not considering as of now
+        orderRequest.setPrice(newTrade.getEntryPrice()); //Price at which order is placed not considering as of now
         orderRequest.setTriggerPrice(newTrade.getStopLossPrice());
 
         // to interact with Dhan Broker API-
@@ -146,12 +148,11 @@ public class DhanBrokerApiClient {
         if (response.getStatusCode().is2xxSuccessful()) {
             logger.info("Order placed successfully: " + response.getBody());
             responseMap.put("tradedPrice",responseBody.path("tradedPrice").asText());
-            return responseMap;
         } else {
             logger.info("Failed to place order: " + response.getStatusCode() + " - " + response.getBody());
             responseMap.put("tradedPrice", "unknown");  // Replace with actual failure details if available
-            return responseMap;
         }
+        return responseMap;
 
     }
 
@@ -207,8 +208,10 @@ public class DhanBrokerApiClient {
 
     public void convertStopLossToMarket(Map<String, Object> order) {
         try {
+            String exchangeSegment = order.get("exchangeSegment").toString();
+            String securityId =order.get("securityId").toString();
             // Fetch the current market price for the security
-            float marketPrice = getCurrentMarketPrice(order.get("securityId").toString());
+            float marketPrice = marketDataService.getCurrentMarketPrice(exchangeSegment,securityId);
 
             // Find the trade by orderId from database
             Trades newTrade = tradeRepository.findByOrderId(order.get("orderId").toString());
