@@ -1,11 +1,17 @@
 package com.task.tradingAutomation.entity;
 
 import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "RiskData")
+@Data
+@NoArgsConstructor
 public class RiskData {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -15,29 +21,4 @@ public class RiskData {
 
     @Column(name = "date", nullable = false)
     private LocalDateTime date; // To track the date of the risk data
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-
-    public Float getCumulativeRisk() {
-        return cumulativeRisk;
-    }
-
-    public void setCumulativeRisk(Float cumulativeRisk) {
-        this.cumulativeRisk = cumulativeRisk;
-    }
-
-    public LocalDateTime getDate() {
-        return date;
-    }
-
-    public void setDate(LocalDateTime date) {
-        this.date = date;
-    }
 }

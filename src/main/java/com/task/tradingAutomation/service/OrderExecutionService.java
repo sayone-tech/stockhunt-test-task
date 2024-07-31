@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import com.task.tradingAutomation.dto.TradingAlertRequest;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Map;
 
@@ -28,6 +29,9 @@ public class OrderExecutionService {
 
     @Autowired
     private TradeRepository tradeRepository;
+
+    @Autowired
+    MarketDataService marketDataService;
 
     private static final int MAX_RETRIES = 30; // Max number of retries
     private static final int RETRY_DELAY_MS = 2000; // Delay between retries
@@ -65,7 +69,7 @@ public class OrderExecutionService {
 
 
     private void closeCurrentPosition(Trades currentTrade) {
-//        closeTrade(currentTrade);
+        closeTrade(currentTrade);
         currentTrade.setStatus(TradeStatus.CLOSE);
         currentTrade.setUpdatedAt(LocalDateTime.now());
         tradeRepository.save(currentTrade);
@@ -100,11 +104,20 @@ public class OrderExecutionService {
         try {
             boolean tradeAllowed = riskManagementService.monitorCurrentDayRisk();
             if(tradeAllowed) {
-
+                // Get current market price
+                String exchangeSegment = DhanOrderRequest.ExchangeSegment.NSE_EQ.toString();// considering NSE_EQ
+                float marketData;
+                try {
+                    marketData = marketDataService.getCurrentMarketPrice(exchangeSegment,newTrade.getSymbolId());
+                } catch (Exception e) {
+                    // Handle other unexpected exceptions
+                    logger.error("Unexpected error retrieving market data: " + e.getMessage());
+                    throw new UserDefinedExceptions.MarketDataRetrievalException("Failed to retrieve market data due to an unexpected error", e);
+                }
                 // Step 1: Place Buy Order
                 if (newTrade.getAction().equalsIgnoreCase("buy")) {
                     // Execute the buy order
-                    Map<String, Object> purchaseOrderMap = placeMarketOrder(newTrade, DhanOrderRequest.TransactionType.BUY.toString());
+                    Map<String, Object> purchaseOrderMap = placeMarketOrder(newTrade, DhanOrderRequest.TransactionType.BUY.toString(),marketData);
                     String orderId = purchaseOrderMap.get("orderId").toString();
                     newTrade.setOrderId(orderId);
                     newTrade.setOrderStatus(purchaseOrderMap.get("orderStatus").toString());
@@ -129,7 +142,7 @@ public class OrderExecutionService {
                     placeStopLossOrder(newTrade);
                 } else if (newTrade.getAction().equalsIgnoreCase("sell")) {
                     // Place sell order
-                    Map<String, Object> sellOrderMap = placeMarketOrder(newTrade, DhanOrderRequest.TransactionType.SELL.toString());
+                    Map<String, Object> sellOrderMap = placeMarketOrder(newTrade, DhanOrderRequest.TransactionType.SELL.toString(),marketData);
                     String orderId = sellOrderMap.get("orderId").toString();
                     newTrade.setOrderId(orderId);
                     newTrade.setOrderStatus(sellOrderMap.get("orderStatus").toString());
@@ -178,9 +191,10 @@ public class OrderExecutionService {
         return false;
     }
 
-    private Map<String, Object> placeMarketOrder(Trades trade, String actionType) throws UserDefinedExceptions.TradeNotPlacedException {
+    private Map<String, Object> placeMarketOrder(Trades trade, String actionType,float marketData) throws UserDefinedExceptions.TradeNotPlacedException {
         trade.setOrderType(DhanOrderRequest.OrderType.MARKET.toString());
         trade.setAction(actionType);
+        trade.setEntryPrice(marketData);
         Map<String, Object> response = null;
         try {
             response = dhanBrokerApiClient.placeTradeOrder(trade);
@@ -207,22 +221,22 @@ public class OrderExecutionService {
     }
 
 
-//    public void closeTrade(Trades trade) {
-//        try {
-//            // Assuming Dhan API has a method to close single trade
-//            dhanBrokerApiClient.closeTrade(trade.getSymbolId(), trade.getQuantity());
-//
-//            // Update the trade status and timestamp
-//            trade.setStatus(TradeStatus.CLOSE);
-//            trade.setUpdatedAt(LocalDateTime.now());
-//
-//            // Save the updated status trade to the repository
-//            tradeRepository.save(trade);
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//            logger.error("Error closing trade for symbol: " + trade.getSymbolId() + ", " + e.getMessage());
-//        }
-//    }
+    public void closeTrade(Trades trade) {
+        try {
+            // Assuming Dhan API has a method to close single trade
+            dhanBrokerApiClient.closeTrade(trade.getSymbolId(), trade.getQuantity());
+
+            // Update the trade status and timestamp
+            trade.setStatus(TradeStatus.CLOSE);
+            trade.setUpdatedAt(LocalDateTime.now());
+
+            // Save the updated status trade to the repository
+            tradeRepository.save(trade);
+        } catch (Exception e) {
+            e.printStackTrace();
+            logger.error("Error closing trade for symbol: " + trade.getSymbolId() + ", " + e.getMessage());
+        }
+    }
 
 
 }

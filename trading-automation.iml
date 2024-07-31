@@ -115,6 +115,10 @@
     <orderEntry type="library" name="Maven: io.github.resilience4j:resilience4j-timelimiter:1.7.1" level="project" />
     <orderEntry type="library" name="Maven: org.slf4j:slf4j-api:2.0.13" level="project" />
     <orderEntry type="library" scope="RUNTIME" name="Maven: io.github.resilience4j:resilience4j-micrometer:1.7.1" level="project" />
+    <orderEntry type="library" name="Maven: org.springframework.boot:spring-boot-starter-websocket:3.2.7" level="project" />
+    <orderEntry type="library" name="Maven: org.springframework:spring-messaging:6.1.10" level="project" />
+    <orderEntry type="library" name="Maven: org.springframework:spring-websocket:6.1.10" level="project" />
+    <orderEntry type="library" name="Maven: org.apache.commons:commons-lang3:3.13.0" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: org.projectlombok:lombok:1.18.24" level="project" />
   </component>
 </module>

@@ -1,5 +1,8 @@
 package com.task.tradingAutomation.enums;
 
+import lombok.Getter;
+
+@Getter
 public enum TradeStatus {
     OPEN("open"),
     CLOSE("close");
@@ -8,10 +11,6 @@ public enum TradeStatus {
 
     TradeStatus(String status) {
         this.status = status;
-    }
-
-    public String getStatus() {
-        return status;
     }
 }
 
